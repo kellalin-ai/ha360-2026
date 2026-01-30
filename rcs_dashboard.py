@@ -33,7 +33,7 @@ def handle_update():
     df.loc[df['姓名'] == target, '積分'] += points
     save_data(df)
     st.balloons()
-    st.session_state.status_msg = f"✅ 已幫 {target} 增加 {points} 分"
+    st.session_state.status_msg = f"✅ 已幫 {target} 增加 {st.session_state.points_to_add} 分"
 
     # 顯示訊息 (使用 Placeholder 更好)
     if st.session_state.get("status_msg"):
