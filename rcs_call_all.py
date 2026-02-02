@@ -17,10 +17,12 @@ def checkout_qrcode(df, conn, save_data):
             if name in df['信箱'].values:
                 idx = df[df['信箱'].str.lower() == name].index[0]  
                 now = datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d %H:%M:%S")            
-                if pd.isna(df.at[idx, '簽退時間']):
+                if pd.isna(df.at[idx, '簽退時間']) and pd.notnull(df.at[idx, '簽到時間']):
                     df.at[idx, '簽退時間'] = now
                     st.info(f"{name} 簽退成功！")
                     save_data(df)
+                elif pd.isna(df.at[idx, '簽到時間']):
+                    t.info(f"{name} 未簽到，無法簽退")
                 else:
                     st.info(f"{name} 已簽退，不需重複簽退") 
             else:
