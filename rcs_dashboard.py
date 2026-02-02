@@ -5,7 +5,7 @@ import qrcode
 from io import BytesIO
 from streamlit_gsheets import GSheetsConnection
 import time
-import rcs_call_all as r   
+import rcs_call_all as rc   
 # --- 1. 使用 cache_resource 保持連線物件，避免重複建立 ---
 @st.cache_resource
 def get_connection():
