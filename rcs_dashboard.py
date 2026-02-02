@@ -81,12 +81,16 @@ if st.session_state.get("attendance_data") is None:
     df = load_data()
     st.session_state.attendance_data = df
 
-if mode == "checkin":
-    # 呼叫簽到頁面函數
+if mode == st.secrets["url_modes"]["checkin_on_key"]: #線上checkin
+    # 呼叫線上簽到頁面函數
     rc.checkin_on_qrcode(st.session_state.attendance_data, conn, save_data)
 
-elif mode == "checkout":
-    # 呼叫簽退頁面函數 (路徑隱密)
+elif mode == st.secrets["url_modes"]["checkin_off_key"]: #現場checkin
+    # 呼叫簽退頁面函數 
+    rc.checkin_off_qrcode(st.session_state.attendance_data, conn, save_data)
+
+elif mode == st.secrets["url_modes"]["checkout_key"]: #checkout
+    # 呼叫簽退頁面函數 
     rc.checkout_qrcode(st.session_state.attendance_data, conn, save_data)
 
 elif menu == "目前積分表":
