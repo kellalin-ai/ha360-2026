@@ -22,7 +22,7 @@ def checkout_qrcode(df, conn, save_data):
                     st.info(f"{name} 簽退成功！")
                     save_data(df)
                 elif pd.isna(df.at[idx, '簽到時間']):
-                    t.info(f"{name} 未簽到，無法簽退")
+                    st.info(f"{name} 未簽到，無法簽退")
                 else:
                     st.info(f"{name} 已簽退，不需重複簽退") 
             else:
