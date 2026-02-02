@@ -101,7 +101,7 @@ elif menu == "目前積分表":
         else row['積分'], axis=1 )
     #依照「積分」進行排序
     # ascending=False 代表「遞減排序」（從大到小）
-    df = df.sort_values(by="積分", ascending=False)
+    df = df.sort_values(by="含出席總分", ascending=False)
     st.dataframe(df, use_container_width=True)
 
 # --------------------------
