@@ -7,7 +7,7 @@ from io import BytesIO
 def checkout_qrcode(df, conn, save_data):     
 
     # --- 介面導航 ---
-    st.set_page_config(page_title="Logistic Community Sharing點名管理系統", layout="wide")
+    st.set_page_config(page_title="Logistic Community Sharing點名管理系統", layout="wide",initial_sidebar_state="collapsed")
 
     st.title("🎓 自主簽退")
     with st.form("checkin", clear_on_submit=True):
