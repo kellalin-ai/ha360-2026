@@ -1,10 +1,13 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import qrcode
 from io import BytesIO
 
-def checkout_qrcode(df, conn, save_data):       
+now = datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d %H:%M:%S")
+def checkout_qrcode(df, conn, save_data):     
+    global now
+
     # --- 介面導航 ---
     st.set_page_config(page_title="Logistic Community Sharing點名管理系統", layout="wide")
 
@@ -14,8 +17,7 @@ def checkout_qrcode(df, conn, save_data):
         btn = st.form_submit_button("送出")
         if btn:
             if name in df['信箱'].values:
-                idx = df[df['信箱'].str.lower() == name].index[0]
-                now = datetime.now().strftime("%H:%M")
+                idx = df[df['信箱'].str.lower() == name].index[0]              
                 if pd.isna(df.at[idx, '簽退時間']):
                     df.at[idx, '簽退時間'] = now
                     st.info(f"{name} 簽退成功！")
@@ -25,7 +27,9 @@ def checkout_qrcode(df, conn, save_data):
             else:
                 st.error("名單中無此信箱")
 
-def checkin_on_qrcode(df, conn, save_data):       
+def checkin_on_qrcode(df, conn, save_data):     
+    global now
+
     # --- 介面導航 ---
     st.set_page_config(page_title="Logistic Community Sharing點名管理系統", layout="wide")
 
@@ -36,7 +40,6 @@ def checkin_on_qrcode(df, conn, save_data):
         if btn:
             if name in df['信箱'].values:
                 idx = df[df['信箱'].str.lower() == name].index[0]
-                now = datetime.now().strftime("%H:%M")
                 if pd.isna(df.at[idx, '簽到時間']):
                     df.at[idx, '簽到時間'] = now
                     df.at[idx, 'Mode']="ONLINE"
@@ -47,7 +50,9 @@ def checkin_on_qrcode(df, conn, save_data):
             else:
                 st.error("名單中無此信箱")
 
-def checkin_off_qrcode(df, conn, save_data):       
+def checkin_off_qrcode(df, conn, save_data):   
+    global now
+
     # --- 介面導航 ---
     st.set_page_config(page_title="Logistic Community Sharing點名管理系統", layout="wide")
 
@@ -58,7 +63,6 @@ def checkin_off_qrcode(df, conn, save_data):
         if btn:
             if name in df['信箱'].values:
                 idx = df[df['信箱'].str.lower() == name].index[0]
-                now = datetime.now().strftime("%H:%M")
                 if pd.isna(df.at[idx, '簽到時間']):
                     df.at[idx, 'Mode']="ONLINE"
                     df.at[idx, '簽到時間'] = now
