@@ -5,6 +5,7 @@ import qrcode
 from io import BytesIO
 from streamlit_gsheets import GSheetsConnection
 import time
+import rcs_call_all as rc
 
 # --- 1. 使用 cache_resource 保持連線物件，避免重複建立 ---
 @st.cache_resource
@@ -48,8 +49,6 @@ def handle_update():
         # 將 number_input 回到預設值 5
         st.session_state.points_to_add = 5
         st.session_state.status_msg = ""
-        
-
 
 # if not os.path.exists(DB_FILE):
 #     df_init = pd.DataFrame([
@@ -77,7 +76,16 @@ menu = st.sidebar.radio("功能選單", ["目前積分表", "管理員後台"])
 # --------------------------
 # 頁面 1：學員簽到頁
 # --------------------------
-if menu == "目前積分表":
+mode = st.query_params.get("mode")
+if mode == "checkin":
+    # 呼叫簽到頁面函數
+    rc.checkin_on_qrcode(st.session_state.attendance_data, conn, save_data)
+
+elif mode == "checkout":
+    # 呼叫簽退頁面函數 (路徑隱密)
+    rc.checkout_qrcode(st.session_state.attendance_data, conn, save_data)
+
+elif menu == "目前積分表":
     st.title("🎓 Logistic Community Sharing")
     df = load_data()
     #依照「積分」進行排序
