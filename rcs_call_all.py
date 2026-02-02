@@ -65,7 +65,7 @@ def checkin_off_qrcode(df, conn, save_data):
                 idx = df[df['信箱'].str.lower() == name].index[0]
                 now = datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d %H:%M:%S")
                 if pd.isna(df.at[idx, '簽到時間']):
-                    df.at[idx, 'Mode']="OFFLINE"
+                    df.at[idx, 'Mode']="LIVE"
                     df.at[idx, '簽到時間'] = now
                     st.info(f"{name} 現場簽到成功！")
                     save_data(df)

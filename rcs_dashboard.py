@@ -5,8 +5,7 @@ import qrcode
 from io import BytesIO
 from streamlit_gsheets import GSheetsConnection
 import time
-import rcs_call_all as rc
-   
+import rcs_call_all as r   
 # --- 1. 使用 cache_resource 保持連線物件，避免重複建立 ---
 @st.cache_resource
 def get_connection():
@@ -96,7 +95,7 @@ elif menu == "目前積分表":
     st.title("🎓 Logistic Community Sharing")
     # 範例：有簽到且有簽退才給予完整出席分
     df['含出席總分'] = df.apply( lambda row:   
-        row['積分'] + 15 if ( pd.notnull(row['簽退時間']) and row['Mode']=="OFFLINE" )
+        row['積分'] + 15 if ( pd.notnull(row['簽退時間']) and row['Mode']=="LIVE" )
         else row['積分'] + 5 if (pd.notnull(row['簽退時間']) and row['Mode']=="ONLINE")
         else row['積分'], axis=1 )
     #依照「積分」進行排序
