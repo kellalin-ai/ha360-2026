@@ -97,10 +97,9 @@ elif menu == "目前積分表":
     st.title("🎓 Logistic Community Sharing")
     # 範例：有簽到且有簽退才給予完整出席分
     df['含出席總分'] = df.apply( lambda row:   
-        row['積分'] + 20 if ( pd.notnull(row['簽退時間']) and row['Mode']=="OFFLINE" 
-        else ( row['積分'] + 10 if (pd.notnull(row['簽退時間']) and row['Mode']=="ONLINE") )
+        row['積分'] + 20 if ( pd.notnull(row['簽退時間']) and row['Mode']=="OFFLINE" )
+        else row['積分'] + 10 if (pd.notnull(row['簽退時間']) and row['Mode']=="ONLINE")
         else row['積分'], axis=1 )
-
     #依照「積分」進行排序
     # ascending=False 代表「遞減排序」（從大到小）
     df = df.sort_values(by="積分", ascending=False)
