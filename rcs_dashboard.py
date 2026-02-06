@@ -5,7 +5,8 @@ import qrcode
 from io import BytesIO
 from streamlit_gsheets import GSheetsConnection
 import time
-import rcs_call_all as rc   
+import rcs_call_all as rc
+
 # --- 1. 使用 cache_resource 保持連線物件，避免重複建立 ---
 @st.cache_resource
 def get_connection():
@@ -30,7 +31,12 @@ def save_data(df):
 
 def handle_update():
     global df, target, points
-    df.loc[df['姓名'] == target, '積分'] += points
+    new_point = df.loc[df['姓名'] == target, '積分']
+    new_point += points
+    email = df.loc[df['姓名'] == target, '信箱']
+
+    update_attendance_cell(email,{"積分":new_point})
+
     save_data(df)
     st.balloons()
     st.session_state.status_msg = f"✅ 已幫 {target} 增加 {st.session_state.points_to_add} 分"
@@ -49,21 +55,48 @@ def handle_update():
         st.session_state.points_to_add = 5
         st.session_state.status_msg = ""
 
-# if not os.path.exists(DB_FILE):
-#     df_init = pd.DataFrame([
-#         {"信箱": "ZZ0001","姓名":"Apple", "Mode": None,"簽到時間": None, "簽退時間": None, "積分": 0}
-#     ])
-#     df_init.to_csv(DB_FILE, index=False)
-# def load_data():
-#     try:
-#         # 嘗試用 utf-8-sig 讀取 (最推薦，能處理 Excel 存出的中文)
-#         return pd.read_csv(DB_FILE, encoding='utf-8-sig')
-#     except UnicodeDecodeError:
-#         # 如果還是失敗，嘗試用繁體中文常用的 big5 讀取
-#         return pd.read_csv(DB_FILE, encoding='big5')
+def update_attendance_cell(email, updates):
+    """
+    email: 學員信箱 (用來找哪一列)
+    updates: 字典格式，例如 {"簽到時間": "10:00", "Mode": "OFFLINE"}
+    """
+    try:
+        # 1. 取得底層的 gspread 工作表物件
+        # 我們直接用 st-gsheets-connection 建立的 client
+        # 注意：spreadsheet 網址要從 secrets 拿
+        spreadsheet_url = st.secrets["connections"]["gsheets"]["spreadsheet"]
+        client = conn._instance._optional_client
+        sh = client.open_by_url(spreadsheet_url)
+        ws = sh.get_worksheet(0)  # 取得第一個分頁
 
-# def save_data(df):
-#     df.to_csv(DB_FILE, index=False)
+        # 2. 找到該學員在第幾列 (假設信箱在第一欄 A)
+        cell = ws.find(email)
+        row_idx = cell.row
+
+        # 3. 根據標題找到對應的欄位索引 (Column Index)
+        # 取得第一列所有標題，建立 標題 -> 欄位序號 的對照表
+        headers = ws.row_values(1)
+        header_map = {title: i + 1 for i, title in enumerate(headers)}
+
+        cells_to_update = []
+
+        # 4. 執行局部更新
+        for col_name, value in updates.items():
+            if col_name in header_map:
+                col_idx = header_map[col_name]
+                cell = ws.cell(row_idx, col_idx)
+                cell.value = value
+                cells_to_update.append(cell)
+        if cells_to_update:
+            ws.update_cells(cells_to_update)
+
+        # 5. 清除快取，確保下次 load_data 是最新的
+        st.cache_data.clear()
+        st.toast(f"✅ {email} 資料同步成功！")
+        return True
+    except Exception as e:
+        st.error(f"同步失敗: {e}")
+        return False
 
 target = "" 
 points = 0
@@ -81,21 +114,21 @@ st.session_state.attendance_data = df
 
 if mode == st.secrets["url_modes"]["checkin_on_key"]: #線上checkin
     # 呼叫線上簽到頁面函數
-    rc.checkin_on_qrcode(st.session_state.attendance_data, conn, save_data)
+    rc.checkin_on_qrcode(st.session_state.attendance_data, conn, update_attendance_cell)
 
 elif mode == st.secrets["url_modes"]["checkin_off_key"]: #現場checkin
     # 呼叫簽退頁面函數 
-    rc.checkin_off_qrcode(st.session_state.attendance_data, conn, save_data)
+    rc.checkin_off_qrcode(st.session_state.attendance_data, conn, update_attendance_cell)
 
 elif mode == st.secrets["url_modes"]["checkout_key"]: #checkout
     # 呼叫簽退頁面函數 
-    rc.checkout_qrcode(st.session_state.attendance_data, conn, save_data)
+    rc.checkout_qrcode(st.session_state.attendance_data, conn, update_attendance_cell)
 
 elif menu == "目前積分表":
     st.title("🎓 Logistic Community Sharing")
     # 範例：有簽到且有簽退才給予完整出席分
     df['含出席總分'] = df.apply( lambda row:   
-        row['積分'] + 15 if ( pd.notnull(row['簽退時間']) and row['Mode']=="LIVE" )
+        row['積分'] + 15 if ( pd.notnull(row['簽退時間']) and row['Mode']=="OFFLINE" )
         else row['積分'] + 5 if (pd.notnull(row['簽退時間']) and row['Mode']=="ONLINE")
         else row['積分'], axis=1 )
     #依照「積分」進行排序
@@ -123,8 +156,7 @@ elif menu == "管理員後台":
         df['簽退時間'] = df['簽退時間'].fillna("")
 
         # 分成三個控制區塊
-        tabs = st.tabs(["🏆 積分管理", 
-                        "📝 名單編輯", 
+        tabs = st.tabs(["🏆 積分管理",
                         "📊 數據導出"])
 
         with tabs[0]:
@@ -142,38 +174,35 @@ elif menu == "管理員後台":
 
             st.button("確認加分", on_click=handle_update)
 
+        # with tabs[1]:
+
+        #     st.subheader("手動修改資料")
+        #     # 讓管理員可以直接在網頁上編輯表格
+        #     edited_df = st.data_editor(
+        #         df,
+        #         num_rows="dynamic", # 允許動態增減行數
+        #         column_config={
+        #             "信箱": st.column_config.TextColumn("信箱", help="請輸入信箱", required=True),
+        #             "姓名": st.column_config.TextColumn("姓名", help="請輸入全名", required=True),
+        #             "簽到來自": st.column_config.TextColumn("簽到來自", disabled=True),
+        #             "簽到時間": st.column_config.TextColumn("簽到時間", disabled=True),
+        #             "簽退時間": st.column_config.TextColumn("簽退時間", disabled=True),
+        #             "積分": st.column_config.NumberColumn(
+        #                 "積分",
+        #                 help="預設值為 0",
+        #                 min_value=0,
+        #                 default=0,  # 這行就是你要的預設值！
+        #                 format="%d 分",
+        #                 disabled=True
+        #             ),
+        #         },
+        #         use_container_width=True
+        #     )
+        #     if st.button("儲存所有修改"):
+        #         save_data(edited_df)
+        #         st.toast("資料庫已更新！")
+
         with tabs[1]:
-
-            st.subheader("手動修改資料")
-            # 讓管理員可以直接在網頁上編輯表格
-            edited_df = st.data_editor(
-                df,
-                num_rows="dynamic", # 允許動態增減行數
-                column_config={
-                    "信箱": st.column_config.TextColumn("信箱", help="請輸入信箱", required=True),
-                    "姓名": st.column_config.TextColumn("姓名", help="請輸入全名", required=True),
-                    "簽到來自": st.column_config.TextColumn("簽到來自", disabled=True),
-                    "簽到時間": st.column_config.TextColumn("簽到時間", disabled=True),
-                    "簽退時間": st.column_config.TextColumn("簽退時間", disabled=True),
-                    "積分": st.column_config.NumberColumn(
-                        "積分",
-                        help="預設值為 0",
-                        min_value=0,
-                        default=0,  # 這行就是你要的預設值！
-                        format="%d 分",
-                        disabled=True
-                    ),
-                },
-                use_container_width=True
-            )
-
-
-
-            if st.button("儲存所有修改"):
-                save_data(edited_df)
-                st.toast("資料庫已更新！")
-
-        with tabs[2]:
 
             st.subheader("下載統計報表")
             st.dataframe(df)
